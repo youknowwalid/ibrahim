@@ -1,0 +1,20 @@
+import { createContext, useContext, useEffect, useState } from 'react';
+
+const Ctx = createContext(null);
+
+export function ContentProvider({ children }) {
+  const [content, setContent] = useState(() => window.__CONTENT__ || null);
+  const [error, setError] = useState(false);
+  useEffect(() => {
+    if (content) return;
+    fetch('/api/content')
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then(setContent)
+      .catch(() => setError(true));
+  }, [content]);
+  if (error) return <p style={{ padding: 40, fontFamily: 'sans-serif' }}>The site could not be loaded. Please refresh the page.</p>;
+  if (!content) return <div className="boot" aria-busy="true" />;
+  return <Ctx.Provider value={content}>{children}</Ctx.Provider>;
+}
+
+export const useContent = () => useContext(Ctx);

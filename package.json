@@ -1,0 +1,25 @@
+{
+  "name": "anonna-fatima-portfolio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Portfolio website and CMS for Anonna Fatima (React front end, dependency-free Node server)",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node server/index.js",
+    "dev": "node scripts/dev.mjs",
+    "test:e2e": "node tests/e2e.mjs"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "optionalDependencies": {
+    "sharp": "0.35.4"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "playwright": "1.56.0"
+  }
+}
