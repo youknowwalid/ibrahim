@@ -54,6 +54,10 @@ function Gate() {
     setUnauthorizedHandler(() => setMe(null));
     refresh();
     document.title = 'Admin';
+    const m = document.createElement('meta');
+    m.name = 'robots';
+    m.content = 'noindex,nofollow';
+    document.head.appendChild(m);
   }, []);
   if (me === undefined) return <div className="adm adm-login"><p className="adm-help">Loading…</p></div>;
   if (!me) return <Login onDone={refresh} />;
@@ -382,7 +386,7 @@ function MediaLibrary({ draft, say }) {
     } catch (e) { say(e.message, 'error'); }
   };
   const copy = async (m) => {
-    const url = location.origin + m.url;
+    const url = /^https?:/.test(m.url) ? m.url : location.origin + m.url;
     try { await navigator.clipboard.writeText(url); say('Link copied.'); } catch { say(url); }
   };
   return (
@@ -433,7 +437,7 @@ function Account({ me, refreshMe, say }) {
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   return (
     <form className="adm-card narrow" onSubmit={submit}>
-      {me.mustChange && <p className="adm-notice">Welcome! Please choose your own password before you continue. Your first-time password was shown when the website was installed (it is also in the file <code>data/ADMIN-LOGIN.txt</code>).</p>}
+      {me.mustChange && <p className="adm-notice">Welcome! Please choose your own password before you continue. Your first-time password is in the file <code>data/ADMIN-LOGIN.txt</code>.</p>}
       <p className="adm-help">Signed in as <strong>{me.user}</strong></p>
       <div className="adm-field"><label htmlFor="ac">Current password</label><input id="ac" type="password" autoComplete="current-password" value={f.current} onChange={set('current')} required /></div>
       <div className="adm-field"><label htmlFor="au">New username (optional)</label><input id="au" autoComplete="username" value={f.username} onChange={set('username')} placeholder={me.user} /></div>

@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { isSB, publicContent } from './sb.js';
 
 const Ctx = createContext(null);
 
@@ -7,6 +8,15 @@ export function ContentProvider({ children }) {
   const [error, setError] = useState(false);
   useEffect(() => {
     if (content) return;
+    if (isSB()) {
+      // Hosted version: read from the database; fall back to the bundled starting content if it is empty or unreachable.
+      publicContent()
+        .then((c) => c || Promise.reject())
+        .catch(() => import('../../server/seed-content.js').then((m) => m.defaultContent))
+        .then(setContent)
+        .catch(() => setError(true));
+      return;
+    }
     fetch('/api/content')
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then(setContent)

@@ -1,8 +1,40 @@
-// Small fetch wrapper for the admin API.
+// Small wrapper for the admin API. On the hosted (Supabase) version the same calls are served by ./sb.js;
+// on the self-hosted Node version they go to /api/admin/* on the local server.
+import * as sb from '../lib/sb.js';
+
 let onUnauthorized = () => {};
-export const setUnauthorizedHandler = (fn) => (onUnauthorized = fn);
+export const setUnauthorizedHandler = (fn) => {
+  onUnauthorized = fn;
+  sb.onSbUnauthorized(fn);
+};
+
+const defaults = () => import('../../server/seed-content.js').then((m) => JSON.parse(JSON.stringify(m.defaultContent)));
+
+async function sbRequest(method, url, body) {
+  const u = url.replace(/^\/api\/admin\//, '');
+  const [route, id] = u.split('/');
+  const key = `${method} ${route}${id ? '/:id' : ''}`;
+  switch (key) {
+    case 'GET me': return sb.me();
+    case 'POST login': await sb.login(body.username, body.password); return { ok: true };
+    case 'POST logout': return sb.logout();
+    case 'GET content': return sb.getContent(defaults);
+    case 'PUT content': return sb.saveContent(body);
+    case 'POST content/:id': if (id === 'reset') return sb.saveContent(await defaults()); break;
+    case 'GET backups': return sb.listBackups();
+    case 'POST backups/:id': if (id === 'restore') return sb.restoreBackup(body.id); break;
+    case 'GET media': return sb.listMedia();
+    case 'DELETE media/:id': return sb.removeMedia(id);
+    case 'GET messages': return sb.listMessages();
+    case 'PATCH messages/:id': return sb.markMessage(id, body.read);
+    case 'DELETE messages/:id': return sb.removeMessage(id);
+    case 'POST password': return sb.changePassword(body.current, body.password);
+  }
+  throw new Error('Unknown request: ' + key);
+}
 
 async function request(method, url, body) {
+  if (sb.isSB()) return sbRequest(method, url, body);
   const res = await fetch(url, {
     method,
     credentials: 'same-origin',
@@ -25,6 +57,7 @@ export const api = {
   patch: (u, b) => request('PATCH', u, b),
   del: (u) => request('DELETE', u),
   upload(file, onProgress) {
+    if (sb.isSB()) return sb.upload(file, onProgress);
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('POST', '/api/admin/upload?name=' + encodeURIComponent(file.name));

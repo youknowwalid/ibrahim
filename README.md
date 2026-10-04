@@ -5,9 +5,20 @@ with a new **Featured** section for real press, interviews and videos.
 
 * **Public pages:** Home · About · Lookbook · Contact
 * **Admin panel:** `/admin` — edit every word, photo, video, link and press feature without touching code
-* **No database, no accounts to buy** — everything is stored in the `data/` folder
+* **Two ways to run it:** hosted on **Vercel + Supabase** (this repo deploys automatically — see below), or on your own computer / any Node host with everything stored in the `data/` folder
 
 ---
+
+## 0. Hosted on Vercel (how this repo is set up)
+
+Every push to the main branch is built and published by Vercel (`vercel.json` — build `npm run build`, output `dist/`, no settings needed).
+The site is a static React app; its content, messages, admin login and uploaded photos/videos live in a free **Supabase** project
+(`supabase.config.json` holds the public project URL and public key — these are meant to be public; the database rules (Row Level Security)
+let visitors only read published content and send contact messages, and only the admin account can change anything).
+
+* **Admin:** `https://<your-site>/admin` — sign in with the username/password you were given, then change the password under *Password*.
+* **Backups:** every save keeps the previous version (latest 30) — see the Dashboard.
+* Test it: `node tests/e2e-hosted.mjs` (uses a simulated Supabase, no internet needed).
 
 ## 1. See it on your computer (5 minutes)
 

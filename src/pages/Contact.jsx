@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useContent } from '../lib/content.jsx';
 import { focusStyle } from '../lib/utils.js';
 import { Reveal } from '../components/Bits.jsx';
+import { isSB, sendMessage } from '../lib/sb.js';
 
 const empty = { firstName: '', lastName: '', email: '', date: '', time: '', message: '', website: '' };
 
@@ -49,6 +50,17 @@ export default function Contact() {
       return;
     }
     setState('sending');
+    if (isSB()) {
+      try {
+        if (!v.website) await sendMessage(v); // the hidden "website" field is a spam trap
+        setState('done');
+        setV(empty);
+      } catch (x) {
+        setFailMsg(x.status === 0 || !x.status ? 'We could not reach the server. Please check your connection and try again.' : /too many/i.test(x.message) ? 'Too many messages were sent just now. Please try again in a few minutes.' : 'Something went wrong. Please try again.');
+        setState('fail');
+      }
+      return;
+    }
     try {
       const r = await fetch('/api/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(v) });
       const data = await r.json().catch(() => ({}));
