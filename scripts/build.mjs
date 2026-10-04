@@ -2,9 +2,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as esbuild from 'esbuild';
+import { defaultContent } from '../server/seed-content.js';
 
 const root = path.resolve(import.meta.dirname, '..');
-const dist = path.join(root, 'dist');
+const dist = process.env.DIST_DIR ? path.resolve(process.env.DIST_DIR) : path.join(root, 'dist');
 const watch = process.argv.includes('--watch');
 
 export const options = {
@@ -20,7 +21,13 @@ export const options = {
   sourcemap: watch ? 'inline' : false,
   target: ['es2020', 'chrome90', 'safari15', 'firefox90'],
   loader: { '.svg': 'dataurl' },
-  define: { 'process.env.NODE_ENV': watch ? '"development"' : '"production"' },
+  define: {
+    'process.env.NODE_ENV': watch ? '"development"' : '"production"',
+    // Public Supabase URL + anon key (safe to ship; protected by Row Level Security). Empty => self-hosted Node mode only.
+    __SB__: process.env.SUPABASE_URL
+      ? JSON.stringify({ url: process.env.SUPABASE_URL, key: process.env.SUPABASE_KEY || '' })
+      : fs.existsSync(path.join(root, 'supabase.config.json')) ? fs.readFileSync(path.join(root, 'supabase.config.json'), 'utf8') : 'null',
+  },
   metafile: true,
   logLevel: 'info',
 };
@@ -33,7 +40,22 @@ function writeHtml(meta) {
   let html = fs.readFileSync(path.join(root, 'src/index.html'), 'utf8');
   html = html.replace('<!--ASSETS_CSS-->', css ? `<link rel="stylesheet" href="${rel(css[0])}">` : '');
   html = html.replace('<!--ASSETS_JS-->', `<script type="module" src="${rel(js[0])}"></script>`);
+  fs.writeFileSync(path.join(dist, 'server-template.html'), html); // placeholders kept for the Node server
+  // Static hosting (Vercel): bake search/social tags from the starting content; the live text still comes from the database.
+  const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  const c = defaultContent;
+  const host = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+  const share = c.site.shareImage && host ? `https://${host}${c.site.shareImage}` : '';
+  const seo = [
+    `<title>${esc(c.site.seoTitle)}</title>`,
+    `<meta name="description" content="${esc(c.site.seoDescription)}">`,
+    `<meta property="og:type" content="website"><meta property="og:title" content="${esc(c.site.seoTitle)}"><meta property="og:description" content="${esc(c.site.seoDescription)}">`,
+    share ? `<meta property="og:image" content="${esc(share)}"><meta name="twitter:card" content="summary_large_image">` : '',
+  ].join('\n');
+  html = html.replace('<!--SEO-->', () => seo).replace('<!--STATE-->', '');
   fs.writeFileSync(path.join(dist, 'index.html'), html);
+  // Starting photos (also served by the Node server from /seed/uploads).
+  fs.cpSync(path.join(root, 'seed/uploads'), path.join(dist, 'uploads'), { recursive: true });
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

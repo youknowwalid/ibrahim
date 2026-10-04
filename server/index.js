@@ -89,7 +89,7 @@ const pageMeta = {
 
 let htmlCache = { mtime: 0, text: '' };
 function renderIndex(req, pathname) {
-  const file = path.join(DIST, 'index.html');
+  const file = path.join(DIST, 'server-template.html');
   const stat = fs.statSync(file);
   if (htmlCache.mtime !== stat.mtimeMs) htmlCache = { mtime: stat.mtimeMs, text: fs.readFileSync(file, 'utf8') };
   const c = pathname.startsWith('/admin') ? store.getContent() : publicContent();
@@ -107,8 +107,8 @@ function renderIndex(req, pathname) {
   ].join('\n');
   // Content is embedded so the first paint needs no extra request.
   const safe = JSON.stringify(c).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
-  const state = `<script>window.__CONTENT__=${safe}</script>`;
-  return htmlCache.text.replace('<!--SEO-->', () => seo).replace('<!--STATE-->', () => (pathname.startsWith('/admin') ? '' : state));
+  const state = `<script>window.__LOCAL__=1;window.__CONTENT__=${safe}</script>`;
+  return htmlCache.text.replace('<!--SEO-->', () => seo).replace('<!--STATE-->', () => (pathname.startsWith('/admin') ? '<script>window.__LOCAL__=1</script>' : state));
 }
 
 // ---------- static files ----------
